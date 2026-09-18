@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Календарь привлечения денег — Колесо Фортуны</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Montserrat:wght@400;600;700&family=Caveat:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-lime: #ccff00; /* Лаймово-зеленый */
+            --primary-lime-dim: rgba(204, 255, 0, 0.3);
+            --bg-dark: #1a0533;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a0533 0%, #2d1b69 30%, #11998e 70%, #38ef7d 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 15s ease infinite;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+            color: #fff;
+            padding: 20px;
+            user-select: none;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            z-index: 10;
+        }
+
+        .header h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(1.5rem, 4vw, 2.8rem);
+            font-weight: 900;
+            text-shadow: 0 0 20px var(--primary-lime-dim), 0 4px 8px rgba(0,0,0,0.3);
+            color: var(--primary-lime);
+            letter-spacing: 2px;
+            animation: titleGlow 2s ease-in-out infinite alternate;
+        }
+
+        .header p {
+            font-family: 'Caveat', cursive;
+            font-size: clamp(1rem, 2.5vw, 1.5rem);
+            color: #e0e0e0;
+            margin-top: 5px;
+            opacity: 0.9;
+        }
+
+        @keyframes titleGlow {
+            from { text-shadow: 0 0 10px var(--primary-lime-dim), 0 4px 8px rgba(0,0,0,0.3); }
+            to { text-shadow: 0 0 30px rgba(204, 255, 0, 0.6), 0 0 60px var(--primary-lime-dim), 0 4px 8px rgba(0,0,0,0.3); }
+        }
+
+        .wheel-container {
+            position: relative;
+            width: min(90vw, 500px);
+            height: min(90vw, 500px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .pointer {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-top: 40px solid #ff1744;
+            filter: drop-shadow(0 4px 8px rgba(255, 23, 68, 0.5));
+            z-index: 20;
+        }
+
+        .wheel-svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 10px 30px rgba(0,0,0,0.4));
+            transition: transform 6s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+        }
+
+        .center-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 22%;
+            height: 22%;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #fff, #e0e0e0, #bbb);
+            border: 4px solid var(--primary-lime);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(0.7rem, 2vw, 1.1rem);
+            font-weight: 900;
+            color: var(--bg-dark);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 0 20px var(--primary-lime-dim), inset 0 -3px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            z-index: 15;
+        }
+
+        .center-btn:hover {
+            transform: translate(-50%, -50%) scale(1.1);
+            box-shadow: 0 0 40px rgba(204, 255, 0, 0.6), inset 0 -3px 6px rgba(0,0,0,0.1);
+            background: radial-gradient(circle at 30% 30%, #fff, var(--primary-lime), #9acd32);
+        }
+
+        .center-btn:active {
+            transform: translate(-50%, -50%) scale(0.95);
+        }
+
+        .center-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.5s ease;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: linear-gradient(145deg, #2d1b69, #1a0533);
+            border: 3px solid var(--primary-lime);
+            border-radius: 24px;
+            padding: clamp(20px, 5vw, 40px);
+            max-width: 90vw;
+            width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            text-align: center;
+            transform: scale(0.5) rotate(-10deg);
+            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 0 60px var(--primary-lime-dim), 0 20px 60px rgba(0,0,0,0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1) rotate(0deg);
+        }
+
+        .modal::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: conic-gradient(from 0deg, transparent, rgba(204, 255, 0, 0.1), transparent, rgba(204, 255, 0, 0.05), transparent);
+            animation: modalShimmer 4s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes modalShimmer {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .modal-emoji {
+            display: none; 
+        }
+
+        .modal-theme {
+            font-family: 'Caveat', cursive;
+            font-size: clamp(1.2rem, 3vw, 1.8rem);
+            color: var(--primary-lime);
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
+            font-weight: bold;
+        }
+
+        .modal-text {
+            font-family: 'Montserrat', sans-serif;
+            font-size: clamp(1rem, 2.5vw, 1.2rem);
+            line-height: 1.6;
+            color: #f0f0f0;
+            margin-bottom: 25px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 1;
+        }
+
+        .modal-btn {
+            padding: 12px 24px;
+            border: 2px solid var(--primary-lime);
+            border-radius: 30px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: clamp(0.8rem, 2vw, 0.95rem);
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-another {
+            background: linear-gradient(135deg, var(--primary-lime), #9acd32);
+            color: var(--bg-dark);
+        }
+
+        .btn-another:hover {
+            background: linear-gradient(135deg, #eaff4d, #b2df38);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px var(--primary-lime-dim);
+        }
+
+        .btn-back {
+            background: transparent;
+            color: var(--primary-lime);
+        }
+
+        .btn-back:hover {
+            background: var(--primary-lime-dim);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px var(--primary-lime-dim);
+        }
+
+        .confetti-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 99;
+            overflow: hidden;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            opacity: 0;
+        }
+
+        @keyframes confettiFall {
+            0% { opacity: 1; transform: translateY(-100px) rotate(0deg); }
+            100% { opacity: 0; transform: translateY(100vh) rotate(720deg); }
+        }
+
+        .hint {
+            margin-top: 20px;
+            font-family: 'Caveat', cursive;
+            font-size: clamp(0.9rem, 2vw, 1.2rem);
+            color: rgba(255, 255, 255, 0.7);
+            text-align: center;
+        }
+
+        .spin-counter {
+            position: fixed;
+            top: 15px;
+            right: 220px;
+            background: rgba(204, 255, 0, 0.15);
+            border: 1px solid var(--primary-lime-dim);
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            color: var(--primary-lime);
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        /* Панель управления звуком */
+        .controls-container {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 15px;
+            border-radius: 30px;
+            border: 1px solid var(--primary-lime-dim);
+            backdrop-filter: blur(5px);
+        }
+
+        .music-label {
+            font-size: 0.75rem;
+            color: var(--primary-lime);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Переключатель музыки (Слайдер) */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 22px;
+        }
+
+        .switch input { 
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #555;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary-lime);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(18px);
+        }
+
+        /* Кнопка общего звука (Динамик) */
+        .sound-toggle-btn {
+            background: transparent;
+            border: 1px solid var(--primary-lime);
+            color: var(--primary-lime);
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .sound-toggle-btn:hover {
+            background: var(--primary-lime);
+            color: var(--bg-dark);
+        }
+
+        .sound-toggle-btn.muted {
+            border-color: #ff4444;
+            color: #ff4444;
+        }
+        
+        .sound-toggle-btn.muted:hover {
+            background: #ff4444;
+            color: white;
+        }
+
+        @media (max-width: 480px) {
+            .wheel-container { width: 92vw; height: 92vw; }
+            .center-btn { width: 26%; height: 26%; }
+            .pointer { border-left: 15px solid transparent; border-right: 15px solid transparent; border-top: 30px solid #ff1744; }
+            .modal-buttons { flex-direction: column; }
+            .modal-btn { width: 100%; }
+            .spin-counter { right: 15px; top: 60px; font-size: 0.75rem; padding: 6px 12px; }
+            .controls-container { top: 15px; right: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Аудио элемент для фоновой музыки -->
+    <audio id="bgMusic" loop>
+        <source src="money-song.mp3" type="audio/mpeg">
+    </audio>
+
+    <div class="spin-counter"> Вращений: <span id="spinCount">0</span></div>
+    
+    <!-- Панель управления звуком -->
+    <div class="controls-container">
+        <!-- Кнопка общего выключения звука -->
+        <button class="sound-toggle-btn" id="globalSoundBtn" onclick="toggleGlobalSound()" title="Выключить все звуки">
+            🔊
+        </button>
+        
+        <span class="music-label">Музыка</span>
+        <label class="switch">
+            <input type="checkbox" id="musicToggle" onchange="toggleMusic()">
+            <span class="slider"></span>
+        </label>
+    </div>
+
+    <div class="header">
+        <h1>Календарь привлечения денег</h1>
+        <p>Крути колесо и узнай, что готовит тебе Вселенная сегодня!</p>
+    </div>
+
+    <div class="wheel-container">
+        <div class="pointer"></div>
+        <svg class="wheel-svg" id="wheel" viewBox="0 0 500 500"></svg>
+        <button class="center-btn" id="spinBtn" onclick="spinWheel()">СТАРТ</button>
+    </div>
+
+    <div class="hint">Нажми на кнопку в центре колеса</div>
+
+    <div class="confetti-container" id="confettiContainer"></div>
+
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <div class="modal-emoji" id="modalEmoji"></div>
+            <div class="modal-theme" id="modalTheme">Тема</div>
+            <div class="modal-text" id="modalText">Предсказание</div>
+            <div class="modal-buttons">
+                <button class="modal-btn btn-another" onclick="getAnother()">Другое предсказание</button>
+                <button class="modal-btn btn-back" onclick="closeModal()">Вернуться</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // === ДАННЫЕ ===
+        const themes = [
+            { name: "Денежный поток", emoji: "", color: "#FFD700", predictions: ["Сегодня денежный поток откроется перед тобой!", "Твой кошелёк сегодня почувствует приятную тяжесть.", "Деньги сегодня будут циркулировать вокруг тебя.", "Сегодня идеальный день, чтобы пересчитать наличные.", "Денежный поток сегодня настолько мощный, что даже старые сбережения начнут приносить проценты.", "Кто-то сегодня вернёт тебе долг.", "Сегодня деньги найдут тебя сами.", "Финансовый ручеёк сегодня превратится в полноводную реку.", "Сегодня ты обнаружишь, что забыл забрать сдачу.", "Денежная энергия сегодня настолько сильна, что монеты начнут размножаться.", "Сегодня кто-то случайно переведёт тебе деньги.", "Твой банковский счёт сегодня получит неожиданный бонус.", "Сегодня деньги будут липнуть к тебе, как магнит.", "Финансовый поток сегодня настолько щедр, что ты забудешь слово 'экономия'.", "Сегодня ты найдёшь деньги там, где точно их не оставлял.", "Денежная река сегодня понесёт тебя к берегам изобилия.", "Сегодня каждая купюра будет притягивать к себе ещё девять.", "Финансовый канал сегодня открыт на максимум.", "Сегодня ты получишь деньги за работу, которую даже не помнишь.", "Денежный поток сегодня так силён, что даже долги начнут таять.", "Сегодня ты найдёшь забытую заначку.", "Финансовая энергия сегодня бурлит, как гейзер.", "Сегодня деньги придут к тебе из самого неожиданного источника.", "Денежный поток сегодня такой мощный, что ты почувствуешь его во сне.", "Сегодня ты получишь приятный бонус, о котором даже не просил.", "Финансовый ручей сегодня превратится в водопад изобилия.", "Сегодня каждая монета в кармане будет работать как магнит.", "Денежная энергия сегодня настолько концентрирована, что ты почувствуешь её кожей.", "Сегодня ты обнаружишь, что твой счёт пополнился сам собой.", "Финансовый поток сегодня несёт тебя прямо к финансовой свободе."] },
+            { name: "Изобилие", emoji: "", color: "#FF8C00", predictions: ["Сегодня Вселенная особенно щедра к тебе!", "Твой дом сегодня наполнится энергией изобилия.", "Сегодня ты поймёшь, что изобилие — это не только деньги.", "Изобилие сегодня постучится в твою дверь трижды.", "Сегодня ты окажешься в месте, где изобилие витает в воздухе.", "Философия изобилия сегодня станет твоей второй натурой.", "Сегодня изобилие проявится в самой неожиданной форме.", "Твоё поле изобилия сегодня расширится до космических масштабов.", "Сегодня ты поймёшь секрет изобилия: чем больше отдаёшь, тем больше получаешь.", "Изобилие сегодня окружит тебя со всех сторон.", "Сегодня ты встретишь человека, который поделится секретом изобилия.", "Энергия изобилия сегодня настолько сильна, что мечты начнут сбываться быстрее.", "Сегодня изобилие придёт к тебе через щедрость другого человека.", "Твой уровень изобилия сегодня поднимется на новую высоту.", "Сегодня ты обнаружишь, что изобилие всегда было рядом.", "Изобилие сегодня проявится через случайную находку.", "Сегодня ты станешь проводником изобилия для других.", "Энергия изобилия сегодня заполнит каждый уголок твоей жизни.", "Сегодня изобилие придёт к тебе через творчество.", "Твоё сознание изобилия сегодня расширится.", "Сегодня изобилие проявится через комплимент от незнакомца.", "Изобилие сегодня будет следовать за тобой, как верный пёс.", "Сегодня ты поймёшь, что изобилие — это состояние души.", "Энергия изобилия сегодня настолько мощна, что ты почувствуешь её в тишине.", "Сегодня изобилие придёт к тебе через старый дружеский контакт.", "Твой личный уровень изобилия сегодня достигнет рекорда.", "Сегодня изобилие проявится в виде неожиданного подарка судьбы.", "Изобилие сегодня окружит тебя, как аромат свежей выпечки.", "Сегодня ты станешь магнитом для изобилия.", "Энергия изобилия сегодня настолько концентрирована, что ты сможешь делиться ею."] },
+            { name: "Удача", emoji: "", color: "#FF1744", predictions: ["Сегодня удача будет ходить за тобой по пятам.", "Четырёхлистный клевер сегодня найдётся в твоём кармане.", "Сегодня удача улыбнётся тебе так широко.", "Фортуна сегодня выбрала тебя своим фаворитом.", "Сегодня даже дождь будет идти только там, где ты не идёшь.", "Удача сегодня настолько сильна, что ты выиграешь даже в споре с самим собой.", "Сегодня ты окажешься в нужном месте в нужное время.", "Фортуна сегодня крутит колесо в твою пользу.", "Сегодня удача проявится в виде попутного ветра.", "Твой личный гороскоп удачи сегодня показывает максимум.", "Сегодня удача придёт к тебе через случайную встречу.", "Фортуна сегодня настолько благосклонна, что ошибки обернутся успехом.", "Сегодня ты почувствуешь, как удача течёт через тебя.", "Удача сегодня будет твоим вторым именем.", "Сегодня удача проявится в виде свободного парковочного места.", "Фортуна сегодня решила сделать тебе подарок.", "Сегодня удача настолько велика, что ты сможешь загадать три желания.", "Твой уровень удачи сегодня пробьёт все рекорды.", "Сегодня удача придёт к тебе через старый лотерейный билет.", "Фортуна сегодня танцует вокруг тебя.", "Сегодня удача проявится в виде отменённого неприятного дела.", "Удача сегодня настолько мощна, что ты выиграешь спор, в котором не участвуешь.", "Сегодня ты станешь любимчиком фортуны.", "Фортуна сегодня выбрала тебя из миллиардов людей.", "Сегодня удача придёт к тебе через случайную скидку.", "Твой личный уровень удачи сегодня достигнет космических высот.", "Сегодня удача проявится в виде неожиданной помощи.", "Фортуна сегодня настолько щедра, что ты получишь больше, чем просил.", "Сегодня удача будет следовать за тобой, как тень.", "Удача сегодня настолько концентрирована, что ты сможешь передавать её другим."] },
+            { name: "Богатство", emoji: "", color: "#E91E63", predictions: ["Сегодня ты почувствуешь себя королём финансового мира!", "Богатство сегодня начнёт проявляться, как рассвет.", "Сегодня ты поймёшь, что настоящее богатство — это здоровье и любовь.", "Корона богатства сегодня засияет на твоей голове ярче.", "Сегодня богатство придёт к тебе через неожиданное наследство от Вселенной!", "Твой уровень богатства сегодня вырастет, как акции успешной компании.", "Сегодня ты поймёшь секрет богатства: оно начинается в голове.", "Богатство сегодня окружит тебя, как королевская мантия.", "Сегодня ты станешь богаче опытом и мудростью.", "Финансовое богатство сегодня потечёт к тебе, как мёд.", "Сегодня богатство проявится в виде дорогой находки.", "Твой внутренний счётчик богатства покажет рекорд.", "Сегодня ты поймёшь, что богатство — это не то, что имеешь, а то, кто ты есть.", "Богатство сегодня постучится в твою дверь.", "Сегодня богатство придёт к тебе через щедрый жест.", "Твой уровень финансового богатства поднимется на ступень.", "Сегодня ты почувствуешь вкус настоящего богатства.", "Богатство сегодня будет следовать за тобой, как верный слуга.", "Сегодня ты станешь проводником богатства для семьи.", "Финансовое богатство сегодня проявится в виде выгодного предложения.", "Сегодня богатство придёт к тебе через творческий проект.", "Твой потенциал богатства сегодня раскроется на 100%.", "Сегодня ты поймёшь, что богатство — это образ мышления.", "Богатство сегодня окружит тебя, как аромат дорогого парфюма.", "Сегодня богатство проявится в виде бесплатного урока от жизни.", "Твой уровень богатства достигнет новой высоты.", "Сегодня ты станешь магнитом для богатства.", "Богатство сегодня придёт к тебе через признание заслуг.", "Сегодня ты почувствуешь себя настолько богатым, что захочешь делиться.", "Финансовое богатство сегодня настолько реально, что ты сможешь его потрогать."] },
+            { name: "Процветание", emoji: "", color: "#9C27B0", predictions: ["Сегодня твои финансовые семена начнут прорастать!", "Процветание сегодня расцветёт, как сакура весной.", "Сегодня ты поймёшь, что процветание — это процесс.", "Твой сад процветания сегодня даст первые плоды.", "Сегодня процветание придёт через заботу о себе.", "Энергия процветания наполнит каждый уголок жизни.", "Сегодня ты посадишь семя процветания, которое вырастет в дерево.", "Процветание сегодня проявится в виде нового дохода.", "Сегодня ты поймёшь, что процветание начинается с благодарности.", "Твой уровень процветания вырастет, как бамбук.", "Сегодня процветание придёт через помощь другому.", "Энергия процветания настолько сильна, что ты почувствуешь её кожей.", "Сегодня ты станешь проводником процветания.", "Процветание проявится в виде комплимента твоей работе.", "Сегодня ты поймёшь секрет процветания: оно приходит к готовым.", "Твой потенциал процветания раскроется полностью.", "Сегодня процветание придёт через старую идею.", "Энергия процветания заполнит дом, как аромат цветов.", "Сегодня ты почувствуешь, как процветание течёт через тебя.", "Процветание проявится в виде выгодного сотрудничества.", "Сегодня ты поймёшь, что процветание — это гармония.", "Твой уровень процветания достигнет новой высоты.", "Сегодня процветание придёт через признание талантов.", "Энергия процветания настолько мощна, что ты поделишься ею.", "Сегодня ты станешь магнитом для процветания.", "Процветание проявится в виде времени для творчества.", "Сегодня ты поймёшь, что процветание — право каждого.", "Твой сад процветания даст неожиданный урожай.", "Сегодня процветание придёт через улыбку незнакомцу.", "Энергия процветания настолько концентрирована, что ты увидишь её."] },
+            { name: "Финансовый успех", emoji: "", color: "#3F51B5", predictions: ["Сегодня финансовый успех будет следовать за тобой!", "Твой успех сегодня засияет ярче бриллианта.", "Сегодня ты поймёшь, что успех — результат правильных решений.", "Финансовый успех придёт через решение старой проблемы.", "Сегодня ты сделаешь шаг к финансовому успеху.", "Твой уровень успеха вырастет на несколько пунктов.", "Сегодня успех проявится в виде выгодной сделки.", "Энергия успеха наполнит тебя уверенностью.", "Сегодня ты поймёшь секрет успеха: дисциплина.", "Финансовый успех постучится в твою дверь.", "Сегодня успех придёт через обучение новому.", "Твой потенциал успеха раскроется на максимум.", "Сегодня ты станешь примером успеха для других.", "Финансовый успех проявится в виде премии.", "Сегодня ты поймёшь, что успех — это марафон.", "Энергия успеха настолько сильна, что ты почувствуешь её.", "Сегодня успех придёт через новое знакомство.", "Твой уровень успеха достигнет новой вершины.", "Сегодня ты почувствуешь вкус настоящего успеха.", "Финансовый успех будет следовать за тобой везде.", "Сегодня ты поймёшь, что успех — это состояние ума.", "Энергия успеха заполнит каждый уголок жизни.", "Сегодня успех проявится в виде неожиданного бонуса.", "Твой успех станет темой для гордости.", "Сегодня ты сделаешь инвестицию, принесущую плоды.", "Финансовый успех придёт через терпение.", "Сегодня ты поймёшь, что успех доступен каждому.", "Энергия успеха настолько мощна, что ты передашь её.", "Сегодня ты станешь магнитом для успеха.", "Финансовый успех проявится в признании заслуг."] },
+            { name: "Денежная энергия", emoji: "", color: "#00BCD4", predictions: ["Сегодня денежная энергия будет бурлить в тебе!", "Твоё денежное поле сегодня сильно физически.", "Сегодня энергия потечёт к тебе, как ток.", "Денежная энергия наполнит каждую клетку тела.", "Сегодня ты станешь проводником энергии для мира.", "Твой уровень энергии достигнет рекорда.", "Сегодня энергия проявится в приливе сил.", "Энергия денег настолько мощна, что ты почувствуешь запах.", "Сегодня ты поймёшь, что энергия — вибрация изобилия.", "Денежная энергия окружит тебя, как аура.", "Сегодня энергия придёт через медитацию.", "Твоё поле расширится до космоса.", "Сегодня ты станешь генератором энергии.", "Энергия проявится в идее для заработка.", "Сегодня ты поймёшь, как управлять энергией.", "Энергия денег настолько концентрирована, что ты увидишь её.", "Сегодня энергия придёт через активность.", "Твой уровень позволит свернуть горы.", "Сегодня ты почувствуешь энергию в руках.", "Энергия проявится в щедром жесте Вселенной.", "Сегодня ты поймёшь, что энергия отзывается на благодарность.", "Энергия заполнит дом, как свет.", "Сегодня энергия придёт через музыку.", "Твоё поле притянет возможности.", "Сегодня ты станешь маяком энергии.", "Энергия проявится в озарении.", "Сегодня ты поймёшь, что энергия — любовь в материи.", "Энергия настолько сильна, что ты поделишься ею.", "Сегодня энергия придёт через смех.", "Твой уровень позволит манифестировать желания."] },
+            { name: "Материальное благополучие", emoji: "", color: "#009688", predictions: ["Сегодня благополучие наполнит твой дом!", "Твой уровень благополучия вырастет заметно.", "Сегодня ты поймёшь, что благополучие — фундамент мечты.", "Благополучие придёт через заботу о доме.", "Сегодня ты сделаешь полезную покупку.", "Твой дом наполнится энергией благополучия.", "Сегодня благополучие проявится в уютном вечере.", "Энергия окружит тебя, как тёплый плед.", "Сегодня ты поймёшь, что всё начинается с порядка.", "Благополучие постучится в дверь.", "Сегодня оно придёт через обновление интерьера.", "Твой уровень достигнет новой высоты.", "Сегодня ты почувствуешь себя хозяином жизни.", "Благополучие проявится в качественном отдыхе.", "Сегодня ты поймёшь, что это норма, а не роскошь.", "Энергия заполнит каждый уголок.", "Сегодня благополучие придёт через вкусную еду.", "Твой дом станет крепостью.", "Сегодня ты почувствуешь, как оно течёт к тебе.", "Благополучие проявится в комфорте.", "Сегодня ты поймёшь, что это результат заботы.", "Энергия настолько сильна, что ты почувствуешь её.", "Сегодня оно придёт через приятную покупку.", "Твой уровень позволит расслабиться.", "Сегодня ты станешь хранителем для семьи.", "Благополучие проявится в качественном сне.", "Сегодня ты поймёшь, что это свобода выбора.", "Энергия заполнит дом с избытком.", "Сегодня оно придёт через сюрприз.", "Твой уровень станет примером."] },
+            { name: "Денежные возможности", emoji: "", color: "#4CAF50", predictions: ["Сегодня возможности окружат тебя, как звёзды!", "Твой радар настроен на максимум.", "Сегодня ты увидишь возможности везде.", "Возможность придёт через предложение.", "Сегодня ты заметишь шанс там, где другие видят проблемы.", "Твой уровень восприимчивости зашкаливает.", "Сегодня возможность проявится в знакомстве.", "Энергия наполнит решимостью.", "Сегодня ты поймёшь, что возможности любят смелых.", "Возможность постучится в дверь.", "Сегодня она придёт через соцсеть.", "Твой потенциал использования на пике.", "Сегодня ты станешь охотником за возможностями.", "Возможность проявится в старом проекте.", "Сегодня ты поймёшь, что они приходят к подготовленным.", "Энергия настолько сильна, что ты почувствуешь её.", "Сегодня возможность придёт через разговор.", "Твой уровень обнаружения рекордный.", "Сегодня ты почувствуешь, как шанс скользит рядом.", "Возможность проявится в бесплатном обучении.", "Сегодня ты поймёшь, что это подарок.", "Энергия заполнит пространство.", "Сегодня возможность придёт через сообщение.", "Твой уровень готовности максимален.", "Сегодня ты станешь магнитом.", "Возможность проявится в выгодном обмене.", "Сегодня ты поймёшь, что они приходят к действующим.", "Энергия настолько мощна, что ты используешь её.", "Сегодня возможность придёт через творчество.", "Твой уровень реализации достигнет рекорда."] },
+            { name: "Финансовая свобода", emoji: "", color: "#2196F3", predictions: ["Сегодня ты почувствуешь вкус свободы!", "Твой уровень свободы вырастет на ступени.", "Сегодня ты поймёшь, что это право каждого.", "Свобода придёт через отказ от лишнего.", "Сегодня ты сделаешь решающий шаг.", "Твой путь станет яснее.", "Сегодня свобода проявится в пассивном доходе.", "Энергия наполнит лёгкостью.", "Сегодня ты поймёшь, что всё начинается с образования.", "Свобода постучится в жизнь.", "Сегодня она придёт через новый доход.", "Твой уровень позволит дышать полной грудью.", "Сегодня ты почувствуешь себя свободным от забот.", "Свобода проявится в возможности выбирать.", "Сегодня ты поймёшь, что это путь, а не точка.", "Энергия настолько сильна, что ты почувствуешь её.", "Сегодня свобода придёт через решение.", "Твой уровень достигнет высоты.", "Сегодня ты почувствуешь, как она течёт.", "Свобода проявится в отмене платежа.", "Сегодня ты поймёшь, что это результат действий.", "Энергия заполнит каждый уголок.", "Сегодня свобода придёт через инвестицию в себя.", "Твой уровень позволит мечтать масштабнее.", "Сегодня ты станешь примером.", "Свобода проявится в возврате денег.", "Сегодня ты поймёшь, что это состояние ума.", "Энергия настолько мощна, что ты поделишься.", "Сегодня свобода придёт через отказ от страха.", "Твой уровень станет фундаментом побед."] },
+            { name: "Денежное изобилие", emoji: "", color: "#FF5722", predictions: ["Сегодня изобилие будет литься, как звёздный дождь!", "Твой уровень достигнет космоса.", "Сегодня ты поймёшь, что это естественно.", "Изобилие придёт через щедрость.", "Сегодня ты станешь проводником для мира.", "Твой потенциал раскроется полностью.", "Сегодня изобилие проявится в богатстве.", "Энергия наполнит каждую клетку.", "Сегодня ты поймёшь, что всё始于 с благодарности.", "Изобилие постучится в жизнь.", "Сегодня оно придёт через помощь.", "Твой уровень позволит жить в роскоши.", "Сегодня ты почувствуешь себя частью Вселенной.", "Изобилие проявится в мелочах.", "Сегодня ты поймёшь, что это право по рождению.", "Энергия настолько сильна, что ты почувствуешь её.", "Сегодня изобилие придёт через творчество.", "Твой уровень станет примером.", "Сегодня ты почувствуешь, как оно течёт.", "Изобилие проявится в подарке судьбы.", "Сегодня ты поймёшь, что это вибрация любви.", "Энергия заполнит пространство.", "Сегодня изобилие придёт через наследство.", "Твой уровень позволит реализовывать мечты.", "Сегодня ты станешь маяком.", "Изобилие проявится в бесплатных благах.", "Сегодня ты поймёшь, что оно доступно всем.", "Энергия настолько мощна, что ты поделишься.", "Сегодня изобилие придёт через принятие.", "Твой уровень достигнет вершины."] },
+            { name: "Процветание и рост", emoji: "", color: "#8BC34A", predictions: ["Сегодня семена прорастут с невероятной скоростью!", "Твой рост будет как у бамбука.", "Сегодня ты поймёшь, что это два крыла птицы.", "Рост придёт через новые знания.", "Сегодня ты сделаешь инвестицию в себя.", "Твой потенциал раскроется, как цветок.", "Сегодня рост проявится в новом навыке.", "Энергия наполнит силой.", "Сегодня ты поймёшь, что рост — боль, ставшая силой.", "Процветание постучится в жизнь.", "Сегодня рост придёт через преодоление страха.", "Твой уровень достигнет высоты.", "Сегодня ты почувствуешь, как растёт внутри.", "Рост проявится в расширении кругозора.", "Сегодня ты поймёшь, что рост требует комфорта с дискомфортом.", "Энергия настолько сильна, что ты почувствуешь её.", "Сегодня рост придёт через выход из зоны комфорта.", "Твой уровень станет фундаментом.", "Сегодня ты почувствуешь, как он течёт.", "Рост проявится в новых горизонтах.", "Сегодня ты поймёшь, что рост — выбор каждый день.", "Энергия заполнит каждый уголок.", "Сегодня рост придёт через признание ошибок.", "Твой уровень позволит достичь высот.", "Сегодня ты станешь примером.", "Рост проявится в прорыве.", "Сегодня ты поймёшь, что процветание — результат роста.", "Энергия настолько мощна, что ты поделишься.", "Сегодня рост придёт через принятие перемен.", "Твой уровень достигнет рекорда."] }
+        ];
+
+        // === ПЕРЕМЕННЫЕ ===
+        let currentRotation = 0;
+        let isSpinning = false;
+        let spinCount = 0;
+        let currentThemeIndex = -1;
+        let currentPredictionIndex = -1;
+        let audioContext = null;
+        let globalMuted = false; // Глобальный флаг тишины
+
+        // === ИНИЦИАЛИЗАЦИЯ КОЛЕСА ===
+        function initWheel() {
+            const svg = document.getElementById('wheel');
+            const centerX = 250;
+            const centerY = 250;
+            const radius = 240;
+            const numSegments = themes.length;
+            const anglePerSegment = 360 / numSegments;
+
+            themes.forEach((theme, index) => {
+                const startAngle = index * anglePerSegment - 90;
+                const endAngle = startAngle + anglePerSegment;
+                const startRad = (startAngle * Math.PI) / 180;
+                const endRad = (endAngle * Math.PI) / 180;
+                const x1 = centerX + radius * Math.cos(startRad);
+                const y1 = centerY + radius * Math.sin(startRad);
+                const x2 = centerX + radius * Math.cos(endRad);
+                const y2 = centerY + radius * Math.sin(endRad);
+
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                const largeArcFlag = anglePerSegment > 180 ? 1 : 0;
+                const d = `M ${centerX} ${centerY} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
+                path.setAttribute('d', d);
+                path.setAttribute('fill', theme.color);
+                path.setAttribute('stroke', '#fff');
+                path.setAttribute('stroke-width', '2');
+                svg.appendChild(path);
+            });
+
+            const outerCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            outerCircle.setAttribute('cx', centerX);
+            outerCircle.setAttribute('cy', centerY);
+            outerCircle.setAttribute('r', radius);
+            outerCircle.setAttribute('fill', 'none');
+            outerCircle.setAttribute('stroke', '#fff');
+            outerCircle.setAttribute('stroke-width', '6');
+            svg.appendChild(outerCircle);
+
+            const innerCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            innerCircle.setAttribute('cx', centerX);
+            innerCircle.setAttribute('cy', centerY);
+            innerCircle.setAttribute('r', 55);
+            innerCircle.setAttribute('fill', '#fff');
+            innerCircle.setAttribute('stroke', '#ccff00');
+            innerCircle.setAttribute('stroke-width', '4');
+            svg.appendChild(innerCircle);
+        }
+
+        // === АУДИО СИСТЕМА (ИСПРАВЛЕННАЯ) ===
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        // Звук клика
+        function playClickSound() {
+            // ПРОВЕРКА НА ГЛОБАЛЬНУЮ ТИШИНУ В САМОМ НАЧАЛЕ
+            if (globalMuted) return; 
+            
+            if (!audioContext) initAudio();
+            if (audioContext.state === 'suspended') audioContext.resume();
+            
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, audioContext.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(300, audioContext.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.2, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            osc.start();
+            osc.stop(audioContext.currentTime + 0.1);
+        }
+
+        // Звук вращения
+        function playSpinSound() {
+            // ПРОВЕРКА НА ГЛОБАЛЬНУЮ ТИШИНУ В САМОМ НАЧАЛЕ
+            if (globalMuted) return;
+
+            if (!audioContext) initAudio();
+            if (audioContext.state === 'suspended') audioContext.resume();
+
+            const duration = 6;
+            const tickCount = 40;
+            const baseVolume = 0.05;
+
+            for (let i = 0; i < tickCount; i++) {
+                const time = (i / tickCount) * duration;
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(800, audioContext.currentTime + time);
+                
+                const tickDuration = 0.05;
+                
+                gain.gain.setValueAtTime(0, audioContext.currentTime + time);
+                gain.gain.linearRampToValueAtTime(baseVolume, audioContext.currentTime + time + 0.01);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + time + tickDuration);
+                
+                osc.start(audioContext.currentTime + time);
+                osc.stop(audioContext.currentTime + time + tickDuration);
+            }
+        }
+
+        // Звук появления окна
+        function playPopupSound() {
+            // ПРОВЕРКА НА ГЛОБАЛЬНУЮ ТИШИНУ В САМОМ НАЧАЛЕ
+            if (globalMuted) return;
+
+            if (!audioContext) initAudio();
+            if (audioContext.state === 'suspended') audioContext.resume();
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(500, audioContext.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1000, audioContext.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.1, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            osc.start();
+            osc.stop(audioContext.currentTime + 0.5);
+        }
+
+        // Управление общим звуком (КНОПКА ДИНАМИКА)
+        function toggleGlobalSound() {
+            const btn = document.getElementById('globalSoundBtn');
+            const musicToggle = document.getElementById('musicToggle');
+            const bgMusic = document.getElementById('bgMusic');
+
+            globalMuted = !globalMuted;
+
+            if (globalMuted) {
+                // РЕЖИМ ТИШИНЫ: Выключаем ВСЁ
+                btn.textContent = '🔇';
+                btn.classList.add('muted');
+                
+                // Останавливаем музыку немедленно
+                bgMusic.pause();
+                musicToggle.checked = false; 
+            } else {
+                // РЕЖИМ ЗВУКА: Разрешаем звуки
+                btn.textContent = '🔊';
+                btn.classList.remove('muted');
+                // Музыка останется выключенной, пока пользователь сам не включит переключатель
+            }
+        }
+
+        // Управление музыкой (Переключатель)
+        function toggleMusic() {
+            // Если глобальный звук выключен, нельзя включить музыку
+            if (globalMuted) {
+                document.getElementById('musicToggle').checked = false;
+                return;
+            }
+
+            const bgMusic = document.getElementById('bgMusic');
+            const toggle = document.getElementById('musicToggle');
+            
+            if (toggle.checked) {
+                bgMusic.volume = 0.6;
+                bgMusic.play().catch(e => {
+                    console.log("Autoplay blocked or file missing:", e);
+                    alert("Не удалось воспроизвести музыку. Проверь файл 'money-song.mp3'.");
+                    toggle.checked = false;
+                });
+            } else {
+                bgMusic.pause();
+                bgMusic.currentTime = 0;
+            }
+        }
+
+        // === ЛОГИКА КОЛЕСА ===
+        function spinWheel() {
+            if (isSpinning) return;
+
+            playClickSound(); 
+            isSpinning = true;
+            const btn = document.getElementById('spinBtn');
+            btn.disabled = true;
+            btn.textContent = '...';
+
+            playSpinSound(); 
+
+            const numSegments = themes.length;
+            const anglePerSegment = 360 / numSegments;
+            const targetSegment = Math.floor(Math.random() * numSegments);
+            const segmentCenter = targetSegment * anglePerSegment + anglePerSegment / 2;
+            const extraSpins = 6 * 360;
+            const targetRotation = extraSpins + (360 - segmentCenter);
+
+            currentRotation += targetRotation;
+
+            const wheel = document.getElementById('wheel');
+            wheel.style.transform = `rotate(${currentRotation}deg)`;
+
+            setTimeout(() => {
+                isSpinning = false;
+                btn.disabled = false;
+                btn.textContent = 'СТАРТ';
+
+                currentThemeIndex = targetSegment;
+                const predictions = themes[currentThemeIndex].predictions;
+                currentPredictionIndex = Math.floor(Math.random() * predictions.length);
+
+                showModal();
+                spinCount++;
+                document.getElementById('spinCount').textContent = spinCount;
+                launchConfetti();
+            }, 6000);
+        }
+
+        function showModal() {
+            playPopupSound();
+            const theme = themes[currentThemeIndex];
+            const prediction = theme.predictions[currentPredictionIndex];
+
+            document.getElementById('modalEmoji').textContent = ""; 
+            document.getElementById('modalTheme').textContent = theme.name; 
+            document.getElementById('modalText').textContent = prediction;
+
+            document.getElementById('modalOverlay').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('active');
+        }
+
+        function getAnother() {
+            playClickSound();
+            const predictions = themes[currentThemeIndex].predictions;
+            let newIndex;
+            do {
+                newIndex = Math.floor(Math.random() * predictions.length);
+            } while (newIndex === currentPredictionIndex && predictions.length > 1);
+
+            currentPredictionIndex = newIndex;
+
+            const modalText = document.getElementById('modalText');
+            modalText.style.opacity = '0';
+            modalText.style.transform = 'translateY(10px)';
+
+            setTimeout(() => {
+                modalText.textContent = predictions[currentPredictionIndex];
+                modalText.style.opacity = '1';
+                modalText.style.transform = 'translateY(0)';
+            }, 300);
+        }
+
+        function launchConfetti() {
+            const container = document.getElementById('confettiContainer');
+            const colors = ['#ccff00', '#FFD700', '#FF8C00', '#FF1744', '#E91E63', '#9C27B0', '#3F51B5', '#00BCD4', '#4CAF50'];
+
+            for (let i = 0; i < 50; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+                    confetti.style.left = Math.random() * 100 + '%';
+                    confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.width = (Math.random() * 10 + 5) + 'px';
+                    confetti.style.height = (Math.random() * 10 + 5) + 'px';
+                    confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+                    confetti.style.animation = `confettiFall ${Math.random() * 2 + 2}s linear forwards`;
+                    confetti.style.animationDelay = Math.random() * 0.5 + 's';
+                    container.appendChild(confetti);
+                    setTimeout(() => confetti.remove(), 4000);
+                }, i * 30);
+            }
+        }
+
+        document.getElementById('modalOverlay').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        window.addEventListener('DOMContentLoaded', function() {
+            initWheel();
+            document.body.addEventListener('click', function initAudioOnFirstClick() {
+                initAudio();
+                document.body.removeEventListener('click', initAudioOnFirstClick);
+            }, { once: true });
+        });
+    </script>
+</body>
+</html>
