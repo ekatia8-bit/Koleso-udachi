@@ -444,7 +444,8 @@
         
         <span class="music-label">Музыка</span>
         <label class="switch">
-            <input type="checkbox" id="musicToggle" onchange="toggleMusic()">
+            <!-- ИЗМЕНЕНИЕ: checked добавлен, чтобы по умолчанию было включено -->
+            <input type="checkbox" id="musicToggle" onchange="toggleMusic()" checked>
             <span class="slider"></span>
         </label>
     </div>
@@ -500,7 +501,7 @@
         let currentThemeIndex = -1;
         let currentPredictionIndex = -1;
         let audioContext = null;
-        let globalMuted = false; // Глобальный флаг тишины
+        let globalMuted = false; 
 
         // === ИНИЦИАЛИЗАЦИЯ КОЛЕСА ===
         function initWheel() {
@@ -550,21 +551,17 @@
             svg.appendChild(innerCircle);
         }
 
-        // === АУДИО СИСТЕМА (ИСПРАВЛЕННАЯ) ===
+        // === АУДИО СИСТЕМА ===
         function initAudio() {
             if (!audioContext) {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
             }
         }
 
-        // Звук клика
         function playClickSound() {
-            // ПРОВЕРКА НА ГЛОБАЛЬНУЮ ТИШИНУ В САМОМ НАЧАЛЕ
-            if (globalMuted) return; 
-            
+            if (globalMuted) return;
             if (!audioContext) initAudio();
             if (audioContext.state === 'suspended') audioContext.resume();
-            
             const osc = audioContext.createOscillator();
             const gain = audioContext.createGain();
             osc.connect(gain);
@@ -578,11 +575,8 @@
             osc.stop(audioContext.currentTime + 0.1);
         }
 
-        // Звук вращения
         function playSpinSound() {
-            // ПРОВЕРКА НА ГЛОБАЛЬНУЮ ТИШИНУ В САМОМ НАЧАЛЕ
             if (globalMuted) return;
-
             if (!audioContext) initAudio();
             if (audioContext.state === 'suspended') audioContext.resume();
 
@@ -612,11 +606,8 @@
             }
         }
 
-        // Звук появления окна
         function playPopupSound() {
-            // ПРОВЕРКА НА ГЛОБАЛЬНУЮ ТИШИНУ В САМОМ НАЧАЛЕ
             if (globalMuted) return;
-
             if (!audioContext) initAudio();
             if (audioContext.state === 'suspended') audioContext.resume();
             const osc = audioContext.createOscillator();
@@ -632,7 +623,6 @@
             osc.stop(audioContext.currentTime + 0.5);
         }
 
-        // Управление общим звуком (КНОПКА ДИНАМИКА)
         function toggleGlobalSound() {
             const btn = document.getElementById('globalSoundBtn');
             const musicToggle = document.getElementById('musicToggle');
@@ -641,24 +631,23 @@
             globalMuted = !globalMuted;
 
             if (globalMuted) {
-                // РЕЖИМ ТИШИНЫ: Выключаем ВСЁ
                 btn.textContent = '🔇';
                 btn.classList.add('muted');
-                
-                // Останавливаем музыку немедленно
                 bgMusic.pause();
                 musicToggle.checked = false; 
             } else {
-                // РЕЖИМ ЗВУКА: Разрешаем звуки
                 btn.textContent = '🔊';
                 btn.classList.remove('muted');
-                // Музыка останется выключенной, пока пользователь сам не включит переключатель
+                // Если глобальный звук включен, но музыка выключена пользователем ранее, 
+                // мы не включаем её автоматически здесь, чтобы не нарушать выбор пользователя.
+                // Но если переключатель музыки стоит (checked), она должна играть.
+                if(musicToggle.checked) {
+                     bgMusic.play().catch(e => console.log("Play error:", e));
+                }
             }
         }
 
-        // Управление музыкой (Переключатель)
         function toggleMusic() {
-            // Если глобальный звук выключен, нельзя включить музыку
             if (globalMuted) {
                 document.getElementById('musicToggle').checked = false;
                 return;
@@ -671,8 +660,9 @@
                 bgMusic.volume = 0.6;
                 bgMusic.play().catch(e => {
                     console.log("Autoplay blocked or file missing:", e);
-                    alert("Не удалось воспроизвести музыку. Проверь файл 'money-song.mp3'.");
-                    toggle.checked = false;
+                    // Если автоплей заблокирован, переключатель визуально останется включенным,
+                    // но музыка не пойдет до первого клика пользователя.
+                    toggle.checked = true; 
                 });
             } else {
                 bgMusic.pause();
@@ -680,7 +670,6 @@
             }
         }
 
-        // === ЛОГИКА КОЛЕСА ===
         function spinWheel() {
             if (isSpinning) return;
 
@@ -788,8 +777,30 @@
 
         window.addEventListener('DOMContentLoaded', function() {
             initWheel();
+            
+            // === АВТОМАТИЧЕСКИЙ ЗАПУСК МУЗЫКИ ===
+            const bgMusic = document.getElementById('bgMusic');
+            const musicToggle = document.getElementById('musicToggle');
+            
+            // Пробуем запустить музыку сразу
+            bgMusic.volume = 0.6;
+            bgMusic.play().then(() => {
+                console.log("Музыка запустилась автоматически!");
+            }).catch(error => {
+                console.log("Автозапуск заблокирован браузером. Ожидаем первого клика.");
+                // Если автоплей заблокирован, ждем любого клика по странице
+                document.body.addEventListener('click', function unlockAudio() {
+                    if (!globalMuted && musicToggle.checked) {
+                        bgMusic.play().catch(e => console.log("Error playing after click:", e));
+                    }
+                    document.body.removeEventListener('click', unlockAudio);
+                }, { once: true });
+            });
+
+            // Инициализация аудио контекста при первом клике (для эффектов)
             document.body.addEventListener('click', function initAudioOnFirstClick() {
                 initAudio();
+                // Удаляем этот слушатель после первого срабатывания
                 document.body.removeEventListener('click', initAudioOnFirstClick);
             }, { once: true });
         });
